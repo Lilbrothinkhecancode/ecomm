@@ -3,10 +3,13 @@ import prisma from "./src/utils/prisma.js"
 import { Prisma, PrismaClient } from '@prisma/client'
 import cors from 'cors'
 import bodyParser from 'body-parser';
+import bcrypt from "bcryptjs"
 
 const app = express();
 const port = process.env.PORT || 8080
 
+app.use(cors());
+app.use(bodyParser.json());
 function filter(obj, ...keys) {
   return keys.reduce((a, c) => ({ ...a, [c]: obj[c]}), {})
 }
@@ -38,8 +41,6 @@ function validateUser(input) {
   return validationErrors
 }
 
-app.use(cors());
-app.use(bodyParser.json());
 
 app.get('/', async (req, res) => {
   const allUsers = await prisma.user.findMany()
@@ -54,15 +55,36 @@ app.get('/user/:id', async (req, res) => {
   res.json(user)
 })
 
-app.post('/', async (req, res) => {
-  const { name, email, password } = req.body
-  const validationErrors = validateUser({ name, email, password })
+app.post('/authenticate', async (req, res) => {
+  const { identity: name, password } = req.body;
+
+  const User = await prisma.User.findUnique({
+    where: { name },
+  });
+
+  if (!User) {
+    return res.status(400).send({ error: 'User not found' });
+  }
+
+  const passwordIsValid = bcrypt.compareSync(password, User.password);
+
+  if (!passwordIsValid) {
+    return res.status(400).send({ error: 'Password is incorrect' });
+  }
+
+  res.send({ success: true });
+});
+
+app.post('/users', async (req, res) => {
+  const { name, email, password } = req.body;
+  const hashedPassword = bcrypt.hashSync(password, 8);
+const validationErrors = validateUser({ name, email, password })
   if (Object.keys(validationErrors).length != 0) return res.status(400).send({
     error: validationErrors
   })
   try {
       const newUser = await prisma.user.create({
-          data: { name, email, password },
+        data: { name, email, password: hashedPassword },
       })
 
       console.log(newUser)
