@@ -4,7 +4,14 @@ import { Prisma } from "@prisma/client"
 import prisma from "../utils/prisma.js"
 import { validateUser } from "../validators/users.js"
 import { filter } from "../utils/common.js"
+import cors from 'cors'
+import bodyParser from 'body-parser';
 const router = express.Router()
+
+const app = express();
+
+app.use(cors());
+app.use(bodyParser.json());
 
 router.post('/', async (req, res) => {
     const data = req.body

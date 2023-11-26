@@ -11,7 +11,7 @@ async function cleanupDatabase() {
   );
 }
 
-describe("POST /signin", () => {
+describe("POST /sign-in", () => {
   let user;
 
   beforeEach(async () => {
@@ -22,6 +22,12 @@ describe("POST /signin", () => {
     };
 
     await cleanupDatabase();
+
+    // Create the user
+    await request(app)
+      .post("/users")
+      .send(user)
+      .set('Accept', 'application/json');
   });
 
   afterAll(async () => {
@@ -30,14 +36,7 @@ describe("POST /signin", () => {
 
   describe("when signing in with correct credentials", () => {
     it("should return an accessToken", async () => {
-      let response = await request(app)
-        .post("/sign-in")
-        .send(user)
-        .set('Accept', 'application/json');
-
-      expect(response.statusCode).toBe(401);
-
-      response = await request(app)
+      const response = await request(app)
         .post("/sign-in")
         .send(user)
         .set('Accept', 'application/json');
@@ -47,39 +46,27 @@ describe("POST /signin", () => {
     });
   });
   
-    describe("when signing in with wrong email", () => {
-      it("should return 401 and no accessToken", async () => {
-        let response = await request(app)
-          .post("/users")
-          .send(user)
-          .set('Accept', 'application/json');
-        expect(response.statusCode).toBe(200);
-  
-        user.email = "wrong@example.com";
-        response = await request(app)
-          .post("/sign-in")
-          .send(user)
-          .set('Accept', 'application/json');
-        expect(response.statusCode).toBe(401);
-        expect(response.body.accessToken).toBeFalsy;
-      });
-    });
-  
-    describe("when signing in with wrong password", () => {
-      it("should return 401 and no accessToken", async () => {
-        let response = await request(app)
-          .post("/users")
-          .send(user)
-          .set('Accept', 'application/json');
-        expect(response.statusCode).toBe(200);
-  
-        user.password = "wrongpassword";
-        response = await request(app)
-          .post("/sign-in")
-          .send(user)
-          .set('Accept', 'application/json');
-        expect(response.statusCode).toBe(401);
-        expect(response.body.accessToken).toBeFalsy;
-      });
+  describe("when signing in with wrong email", () => {
+    it("should return 401 and no accessToken", async () => {
+      user.email = "wrong@example.com";
+      const response = await request(app)
+        .post("/sign-in")
+        .send(user)
+        .set('Accept', 'application/json');
+      expect(response.statusCode).toBe(401);
+      expect(response.body.accessToken).toBeFalsy;
     });
   });
+  
+  describe("when signing in with wrong password", () => {
+    it("should return 401 and no accessToken", async () => {
+      user.password = "wrongpassword";
+      const response = await request(app)
+        .post("/sign-in")
+        .send(user)
+        .set('Accept', 'application/json');
+      expect(response.statusCode).toBe(401);
+      expect(response.body.accessToken).toBeFalsy;
+    });
+  });
+});

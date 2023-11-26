@@ -1,4 +1,4 @@
-function validateUser(input) {
+export function validateUser(input) {
     const validationErrors = {}
   
     if (!input || !('name' in input) || !input['name'] || input['name'].length == 0) {
