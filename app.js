@@ -4,9 +4,10 @@ import { Prisma, PrismaClient } from '@prisma/client'
 import cors from 'cors'
 import bodyParser from 'body-parser';
 import bcrypt from "bcryptjs"
+import { signAccessToken } from "./src/utils/jwt.js"
 
 const app = express();
-const port = process.env.PORT || 8080
+
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -47,6 +48,26 @@ app.get('/', async (req, res) => {
   res.json(allUsers)
 })
 
+function validateLogin(input) {
+  const validationErrors = {}
+
+  const email = input ? input['email'] : null;
+  const password = input ? input['password'] : null;
+
+  if (!email || email.length == 0) {
+    validationErrors['email'] = 'cannot be blank';
+  }
+
+  if (!password || password.length == 0) {
+    validationErrors['password'] = 'cannot be blank';
+  }
+  
+  if (email && !email.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/)) {
+    validationErrors['email'] = 'is invalid';
+  }
+
+  return validationErrors
+}
 app.get('/user/:id', async (req, res) => {
   const { id } = req.params
   const user = await prisma.user.findUnique({
@@ -113,7 +134,33 @@ const validationErrors = validateUser({ name, email, password })
     res.json(user)
   })
 
-app.listen(port, function (err) {
-  if (err) console.log(err);
-  console.log("Server listening on PORT ${port}");
-});
+  app.post('/sign-in', async (req, res) => {
+    const { email, password } = req.body;
+  
+    const validationErrors = validateLogin({ email, password })
+  
+    if (Object.keys(validationErrors).length != 0) return res.status(400).send({
+      error: validationErrors
+    })
+  
+    const user = await prisma.user.findUnique({
+      where: {
+        email
+      }
+    })
+  
+    if (!user) return res.status(401).send({
+      error: 'Email address or password not valid'
+    })
+  
+    const checkPassword = bcrypt.compareSync(password, user.password)
+    if (!checkPassword) return res.status(401).send({
+      error: 'Email address or password not valid'
+    })
+  
+    const userFiltered = filter(user, 'id', 'name', 'email')
+    const accessToken = await signAccessToken(userFiltered)
+    return res.json({ accessToken })
+  })
+
+  export default app
