@@ -23,7 +23,6 @@ describe("POST /sign-in", () => {
 
     await cleanupDatabase();
 
-    // Create the user
     await request(app)
       .post("/users")
       .send(user)
